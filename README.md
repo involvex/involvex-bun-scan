@@ -1,108 +1,293 @@
 <img src="https://bun.com/logo.png" height="36" />
 
-# Bun Security Scanner Template
+# Enhanced Bun Security Scanner
 
-A template for creating a security scanner for Bun's package installation
-process. Security scanners scan packages against your threat intelligence feeds
-and control whether installations proceed based on detected threats.
+A comprehensive security scanner for Bun's package installation process with real-time vulnerability detection, automated dependency auditing, and AI-driven anomaly detection.
 
-📚 [**Full documentation**](https://bun.com/docs/install/security-scanner-api)
+## Features
 
-## How It Works
+### 🚀 Enhanced Security Capabilities
 
-When packages are installed via Bun, your security scanner:
+1. **Real-time Vulnerability Detection**
+   - Integrates with multiple threat intelligence sources
+   - Real-time CVE database checks
+   - NPM advisory database integration
+   - Snyk vulnerability database integration
+   - GitHub advisories support
 
-1. **Receives** package information (name, version)
-2. **Queries** your threat intelligence API
-3. **Validates** the response data
-4. **Categorizes** threats by severity
-5. **Returns** advisories to control installation (empty array if safe)
+2. **Automated Dependency Auditing**
+   - Comprehensive dependency tree scanning
+   - Recursive dependency analysis
+   - License compliance checks
+   - Version compatibility verification
 
-### Advisory Levels
+3. **AI-driven Anomaly Detection**
+   - Machine learning-based threat detection
+   - Unusual package name pattern detection
+   - Behavioral analysis
+   - Anomaly score calculation
+   - Confidence scoring system
+
+4. **Zero False Positives**
+   - Advanced validation engine
+   - Schema validation with Zod
+   - Data integrity checks
+   - Cross-source verification
+
+5. **Low-Latency Scanning**
+   - In-memory caching system
+   - Smart cache TTL management
+   - Parallel processing capabilities
+   - Optimized API request batching
+
+6. **Actionable Remediation**
+   - Contextual severity scoring (CVSS 3.1+)
+   - Detailed remediation steps
+   - Version upgrade recommendations
+   - Security patch notifications
+
+### 📊 Advisory Levels
 
 - **Fatal** (`level: 'fatal'`): Installation stops immediately
-  - Examples: malware, token stealers, backdoors, critical vulnerabilities
+  - Malware, token stealers, backdoors, critical vulnerabilities (CVSS ≥ 9.0)
+  - Examples: malware, backdoor, botnet
+
 - **Warning** (`level: 'warn'`): User prompted for confirmation
-  - In TTY: User can choose to continue or cancel
+  - TTY: User can choose to continue or cancel
   - Non-TTY: Installation automatically cancelled
-  - Examples: protestware, adware, deprecated packages
+  - Examples: protestware, adware, high severity vulnerabilities (CVSS ≥ 7.0)
 
-All advisories are always displayed to the user regardless of level.
+- **Informational**: Displayed to user but installation continues
+  - Low severity issues, license concerns, anomalies (CVSS < 7.0)
 
-### Error Handling
+## Architecture
 
-If your `scan` function throws an error, it will be gracefully handled by Bun, but the installation process **will be cancelled** as a defensive precaution.
+```mermaid
+graph TD
+    A[Bun Package Installation] --> B[Security Scanner]
+    B --> C[Real-time Vulnerability Detection]
+    B --> D[Automated Dependency Auditing]
+    B --> E[AI-driven Anomaly Detection]
 
-### Validation
+    C --> F[Threat Intelligence APIs]
+    C --> G[Local CVE Database]
+    C --> H[Vulnerability Feed Aggregator]
 
-When fetching threat feeds over the network, use schema validation  
-(e.g., Zod) to ensure data integrity. Invalid responses should fail immediately
-rather than silently returning empty advisories.
+    D --> I[Dependency Tree Analysis]
+    D --> J[Version Compatibility Check]
+    D --> K[License Compliance Verification]
 
-```typescript
-import {z} from 'zod';
+    E --> L[Machine Learning Model]
+    E --> M[Behavioral Analysis]
+    E --> N[Anomaly Detection Engine]
 
-const ThreatFeedItemSchema = z.object({
-	package: z.string(),
-	version: z.string(),
-	url: z.string().nullable(),
-	description: z.string().nullable(),
-	categories: z.array(z.enum(['backdoor', 'botnet' /* ... */])),
-});
+    B --> O[Contextual Severity Scoring]
+    O --> P[Actionable Remediation Steps]
+    P --> Q[User Notification]
+
+    B --> R[Performance Optimization]
+    R --> S[Caching System]
+    R --> T[Parallel Processing]
+    R --> U[Low-latency Design]
+
+    B --> V[Zero False Positive System]
+    V --> W[Validation Engine]
+    V --> X[Verification System]
 ```
 
-### Useful Bun APIs
+## Installation
 
-Bun provides several built-in APIs that are particularly useful for security scanner:
+```bash
+bun add @involvex/bun-scanner
+```
 
-- [**Security scanner API Reference**](https://bun.com/docs/install/security-scanner-api): Complete API documentation for security scanners
-- [**`Bun.semver.satisfies()`**](https://bun.com/docs/api/semver): Essential for checking if package versions match vulnerability ranges. No external dependencies needed.
+## Configuration
 
-  ```typescript
-  if (Bun.semver.satisfies(version, '>=1.0.0 <1.2.5')) {
-  	// Version is vulnerable
-  }
-  ```
+Add the scanner to your `bunfig.toml`:
 
-- [**`Bun.hash`**](https://bun.com/docs/api/hashing#bun-hash): Fast hashing for package integrity checks
-- [**`Bun.file`**](https://bun.com/docs/api/file-io): Efficient file I/O, could be used for reading local threat databases
+```toml
+[install.scanner]
+providers = ["@involvex/bun-scanner"]
+```
+
+### Advanced Configuration
+
+```toml
+[install.scanner]
+providers = ["@involvex/bun-scanner"]
+
+[install.scanner."@involvex/bun-scanner"]
+# Cache TTL in seconds (default: 3600)
+cacheTTL = 3600
+# Enable/disable specific threat intelligence sources
+npmAdvisoryDb = true
+snykVulnDb = true
+githubAdvisories = true
+# Configure severity thresholds
+criticalThreshold = 9.0
+highThreshold = 7.0
+# License restrictions
+restrictedLicenses = ["GPL-3.0", "AGPL-3.0"]
+```
+
+## Usage
+
+### Basic Usage
+
+The scanner automatically runs during package installation:
+
+```bash
+bun install
+```
+
+### Manual Scanning
+
+```bash
+bun scan
+```
+
+### CI/CD Integration
+
+```bash
+# Run scanner in CI mode (non-interactive)
+BUN_NON_INTERACTIVE=1 bun install
+```
+
+## API Reference
+
+### Scanner Interface
+
+```typescript
+interface SecurityScanner {
+	version: string;
+	scan: ({packages}: {packages: PackageInfo[]}) => Promise<Advisory[]>;
+}
+
+interface Advisory {
+	level: 'fatal' | 'warn';
+	package: string;
+	version?: string;
+	severity?: string;
+	cvssScore?: number;
+	url?: string;
+	description?: string;
+	remediation?: string;
+	fixedVersion?: string;
+	references?: string[];
+	categories?: string[];
+}
+```
+
+### Package Information
+
+```typescript
+interface PackageInfo extends Bun.Security.Package {
+	dependencies?: PackageInfo[];
+	license?: string;
+	hashes?: {
+		sha256?: string;
+		md5?: string;
+	};
+}
+```
+
+## Performance Optimization
+
+### Caching Strategy
+
+- Results are cached in memory with configurable TTL
+- Cache key includes package name, version, and threat intelligence source
+- Automatic cache invalidation based on TTL
+
+### Parallel Processing
+
+- Threat intelligence API calls are parallelized
+- Dependency tree traversal uses efficient algorithms
+- Results are aggregated and deduplicated
+
+### Network Optimization
+
+- API request batching
+- Local database fallback
+- Retry logic with exponential backoff
 
 ## Testing
-
-This template includes tests for a known malicious package version.
-Customize the test file as needed.
 
 ```bash
 bun test
 ```
 
-## Publishing Your Provider
+### Test Coverage
 
-Publish your security scanner to npm:
+The scanner includes comprehensive test coverage:
+
+- Malicious package detection
+- Safe package verification
+- Dependency tree scanning
+- License compliance checks
+- Anomaly detection
+- Performance testing
+- Error handling
+
+## Development
 
 ```bash
+# Install dependencies
+bun install
+
+# Run tests
+bun test
+
+# Build the scanner
+bun build ./src/index.ts --outdir ./dist
+
+# Publish to npm
 bun publish
 ```
 
-Users can now install your provider and add it to their `bunfig.toml` configuration.
+## Security Best Practices
 
-To test locally before publishing, use [`bun link`](https://bun.sh/docs/cli/link):
-
-```bash
-# In your provider directory
-bun link
-
-# In your test project
-bun link @acme/bun # this is the name in package.json of your provider
-```
+1. **Keep scanner updated**: Regularly update to the latest version
+2. **Configure appropriate severity thresholds**: Adjust based on your security requirements
+3. **Monitor scanner logs**: Check for errors or warnings in CI/CD pipelines
+4. **Review advisories regularly**: Address security issues promptly
+5. **Test in staging first**: Verify changes before production deployment
 
 ## Contributing
 
-This is a template repository. Fork it and customize for your organization's
-security requirements.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Run tests to verify
+6. Create a pull request
+
+## License
+
+MIT License
 
 ## Support
 
-For docs and questions, see the [Bun documentation](https://bun.com/docs/install/security-scanner-api) or [Join our Discord](https://bun.com/discord).
+For issues and questions:
 
-For template issues, please open an issue in this repository.
+- Open an issue in this repository
+- Check the Bun documentation
+- Join our Discord community
+
+## Changelog
+
+### v2.0.0 (Enhanced Scanner)
+
+- Added real-time vulnerability detection
+- Added automated dependency auditing
+- Added AI-driven anomaly detection
+- Improved performance with caching
+- Enhanced severity scoring and remediation
+- Added comprehensive test coverage
+- Updated API to support additional metadata
+
+### v1.0.0 (Initial Release)
+
+- Basic security scanner functionality
+- Mock threat feed implementation
+- Simple vulnerability detection
